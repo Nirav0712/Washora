@@ -2,14 +2,14 @@
   "name": "washora-monorepo",
   "version": "1.0.0",
   "private": true,
-  "main": "main.js",
+  "main": "dist/main.js",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api",
-    "start": "node apps/api/dist/main.js",
+    "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api && node scripts/verify-build.js",
+    "start": "node dist/main.js",
     "build:all": "npm run build --workspaces",
     "build:api": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api",
     "build:web": "npm run build --workspace=apps/web",
