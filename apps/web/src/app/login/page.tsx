@@ -35,51 +35,55 @@ export default function UnifiedLoginPage() {
     setError(null);
 
     try {
-      if (roleType === 'SHOP_OWNER' || roleType === 'SHOP_STAFF') {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            password,
-            tenantSlug: tenantSlug.trim() || undefined,
-          }),
-        });
-        const data = await res.json();
-        if (data.success && data.data?.accessToken) {
-          localStorage.setItem('accessToken', data.data.accessToken);
-          localStorage.setItem('token', data.data.accessToken);
-          localStorage.setItem('refreshToken', data.data.refreshToken || '');
-          localStorage.setItem('user', JSON.stringify(data.data.user));
-          localStorage.setItem('tenant', JSON.stringify(data.data.tenant));
-          localStorage.setItem('role', JSON.stringify(data.data.role));
+      const cleanEmail = email.trim();
 
-          // Redirect to shop dashboard
-          router.push('/dashboard');
-        } else {
-          setError(data.message || 'Invalid email or password');
-        }
-      } else {
-        // Platform Partner Admin or Super Admin
-        const res = await fetch('/api/platform/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-        const data = await res.json();
-        if (data.success && data.data?.token) {
-          localStorage.setItem('adminToken', data.data.token);
-          localStorage.setItem('admin', JSON.stringify(data.data.admin));
+      // 1. Try Laundry Shop authentication (Shop Owner / Staff)
+      const shopRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanEmail,
+          password,
+          tenantSlug: tenantSlug.trim() || undefined,
+        }),
+      });
+      const shopData = await shopRes.json();
 
-          // Redirect to platform admin portal (production Vercel domain or local dev port 3002)
-          const adminBaseUrl = (process.env.NEXT_PUBLIC_ADMIN_URL
-            || (process.env.NODE_ENV === 'production' ? 'https://washora-myo9.vercel.app' : 'http://localhost:3002')).replace(/\/+$/, '');
-          const targetPath = data.data.admin.role === 'PARTNER_ADMIN' ? '/partner-dashboard' : '/';
-          window.location.href = `${adminBaseUrl}${targetPath}?token=${encodeURIComponent(data.data.token)}`;
-        } else {
-          setError(data.message || 'Invalid platform administrator credentials');
-        }
+      if (shopData.success && shopData.data?.accessToken) {
+        localStorage.setItem('accessToken', shopData.data.accessToken);
+        localStorage.setItem('token', shopData.data.accessToken);
+        localStorage.setItem('refreshToken', shopData.data.refreshToken || '');
+        localStorage.setItem('user', JSON.stringify(shopData.data.user));
+        localStorage.setItem('tenant', JSON.stringify(shopData.data.tenant));
+        localStorage.setItem('role', JSON.stringify(shopData.data.role));
+
+        // Redirect to shop dashboard
+        router.push('/dashboard');
+        return;
       }
+
+      // 2. If shop auth fails, automatically try Platform Admin / Sales Partner authentication
+      const platformRes = await fetch('/api/platform/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password }),
+      });
+      const platformData = await platformRes.json();
+
+      if (platformData.success && platformData.data?.token) {
+        localStorage.setItem('adminToken', platformData.data.token);
+        localStorage.setItem('admin', JSON.stringify(platformData.data.admin));
+
+        // Redirect to platform admin portal with token handover
+        const adminBaseUrl = (process.env.NEXT_PUBLIC_ADMIN_URL
+          || (process.env.NODE_ENV === 'production' ? 'https://washora-myo9.vercel.app' : 'http://localhost:3002')).replace(/\/+$/, '');
+        const targetPath = platformData.data.admin?.role === 'PARTNER_ADMIN' ? '/partner-dashboard' : '/';
+        window.location.href = `${adminBaseUrl}${targetPath}?token=${encodeURIComponent(platformData.data.token)}`;
+        return;
+      }
+
+      // If both fail, display error message
+      setError(shopData.message || platformData.message || 'Invalid email or password');
     } catch (err: any) {
       setError(err.message || 'Network error during login');
     } finally {
