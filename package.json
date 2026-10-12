@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api",
+    "start": "node apps/api/dist/main.js",
     "build:all": "npm run build --workspaces",
     "build:api": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api",
     "build:web": "npm run build --workspace=apps/web",
