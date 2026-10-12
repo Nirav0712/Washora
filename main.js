@@ -8,11 +8,13 @@ const fs = require('fs');
 function resolveEntry() {
   const candidates = [
     path.join(__dirname, 'dist', 'main.js'),
+    path.join(__dirname, 'dist', 'src', 'main.js'),
     path.join(__dirname, 'apps', 'api', 'dist', 'main.js'),
-    path.join(__dirname, 'dist', 'apps', 'api', 'src', 'main.js'),
     path.join(__dirname, 'apps', 'api', 'dist', 'src', 'main.js'),
     path.resolve(process.cwd(), 'dist', 'main.js'),
+    path.resolve(process.cwd(), 'dist', 'src', 'main.js'),
     path.resolve(process.cwd(), 'apps', 'api', 'dist', 'main.js'),
+    path.resolve(process.cwd(), 'apps', 'api', 'dist', 'src', 'main.js'),
   ];
 
   for (const candidate of candidates) {

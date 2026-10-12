@@ -47,3 +47,4 @@ Thumbs.db
 .turbo/
 .cache/
 tsconfig.tsbuildinfo
+*.tsbuildinfo
