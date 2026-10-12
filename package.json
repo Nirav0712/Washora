@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "build:hostinger:api": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:api": "npm run start:dev --workspace=apps/api",
     "dev:api:memory": "npm run start:dev:memory --workspace=apps/api",
