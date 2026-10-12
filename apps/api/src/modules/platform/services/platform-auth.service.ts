@@ -35,10 +35,34 @@ export class PlatformAuthService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    await this.seedInitialSuperAdmin();
+    const isDbReady = () => (this.adminModel.db?.readyState as number) === 1;
+
+    if (isDbReady()) {
+      await this.seedInitialSuperAdmin();
+    } else {
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, 2000);
+        this.adminModel.db?.once('connected', () => {
+          clearTimeout(timer);
+          resolve();
+        });
+      });
+      if (isDbReady()) {
+        await this.seedInitialSuperAdmin();
+      } else {
+        this.adminModel.db?.once('connected', () => {
+          this.seedInitialSuperAdmin().catch((err) => {
+            this.logger.warn(`Could not seed initial superadmin: ${err?.message || err}`);
+          });
+        });
+      }
+    }
   }
 
   async seedInitialSuperAdmin() {
+    if ((this.adminModel.db?.readyState as number) !== 1) {
+      return;
+    }
     try {
       const count = await this.adminModel.countDocuments();
       if (count === 0) {

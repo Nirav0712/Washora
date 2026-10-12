@@ -33,7 +33,10 @@ import { MongooseModule } from '@nestjs/mongoose';
               logger.warn('MongoDB connection disconnected');
             });
             connection.on('error', (error: any) => {
-              logger.error(`MongoDB connection error: ${error?.message || error}`);
+              const errName = error?.name || 'MongoError';
+              const errCode = error?.code || error?.codeName || 'UNKNOWN';
+              const errMsg = error?.message || String(error);
+              logger.error(`[MongoDB Connection Error] name=${errName} code=${errCode}: ${errMsg}`);
             });
             return connection;
           },

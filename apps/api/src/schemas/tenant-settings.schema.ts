@@ -5,7 +5,7 @@ export type TenantSettingsDocument = TenantSettings & Document;
 
 @Schema({ timestamps: true, collection: 'tenant_settings' })
 export class TenantSettings {
-  @Prop({ type: Types.ObjectId, ref: 'Tenant', required: true, unique: true, index: true })
+  @Prop({ type: Types.ObjectId, ref: 'Tenant', required: true, unique: true })
   tenantId: Types.ObjectId;
 
   @Prop({ default: 'WSH-', trim: true })
@@ -93,4 +93,3 @@ export class TenantSettings {
 
 export const TenantSettingsSchema = SchemaFactory.createForClass(TenantSettings);
 
-TenantSettingsSchema.index({ tenantId: 1 }, { unique: true });

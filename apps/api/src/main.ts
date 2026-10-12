@@ -1,8 +1,11 @@
+import * as http from 'http';
+const express = require('express');
+const { json, urlencoded } = express;
 import { NestFactory, Reflector } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
-import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -11,12 +14,15 @@ import { validateEnvironment } from './config/env.validation';
 import { RateLimiterGuard } from './common/guards/rate-limiter.guard';
 
 async function bootstrap() {
+  const startupStartMs = Date.now();
   const structuredLogger = new StructuredLoggerService('Bootstrap');
   const port = parseInt(process.env.PORT || '4000', 10);
   const host = process.env.HOST || '0.0.0.0';
   const nodeEnv = process.env.NODE_ENV || 'development';
 
-  structuredLogger.log(`[Startup Stage] Starting Washora API (PID=${process.pid}, NODE_ENV=${nodeEnv}, PORT=${port}, HOST=${host})`);
+  structuredLogger.log(
+    `[Startup Stage] Starting Washora API (PID=${process.pid}, NODE_ENV=${nodeEnv}, PORT=${port}, HOST=${host})`,
+  );
 
   if (process.env.MONGODB_URI) {
     const sanitizedUri = process.env.MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@');
@@ -39,8 +45,52 @@ async function bootstrap() {
     }
   }
 
+  // 2. Register HTTP listener immediately with Hostinger within startup deadline (< 100ms)
+  const expressApp = express();
+  const server = http.createServer(expressApp);
+
+  let isNestInitialized = false;
+
+  // Intercept requests arriving during the module initialization window
+  expressApp.use((req, res, next) => {
+    if (isNestInitialized) {
+      return next();
+    }
+    if (req.path === '/health/live') {
+      return res.status(200).json({
+        status: 'alive',
+        stage: 'initializing',
+        service: 'washora-api',
+        uptimeSeconds: Math.floor((Date.now() - startupStartMs) / 1000),
+        timestamp: new Date().toISOString(),
+      });
+    }
+    if (req.path === '/health' || req.path === '/health/ready') {
+      return res.status(503).json({
+        status: 'initializing',
+        database: 'disconnected',
+        service: 'washora-api',
+        timestamp: new Date().toISOString(),
+      });
+    }
+    next();
+  });
+
+  const listenStartMs = Date.now();
+  await new Promise<void>((resolve, reject) => {
+    server.listen(port, host, () => {
+      const listenDurationMs = Date.now() - listenStartMs;
+      structuredLogger.log(
+        `[Startup Stage] [${new Date().toISOString()}] HTTP listener registered with Hostinger on ${host}:${port} in ${listenDurationMs}ms`,
+      );
+      resolve();
+    });
+    server.on('error', reject);
+  });
+
+  // 3. Initialize NestJS application on top of the established HTTP server
   structuredLogger.log('[Startup Stage] Creating NestJS application context...');
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), {
     bufferLogs: true,
   });
 
@@ -110,8 +160,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  structuredLogger.log(`[Startup Stage] Binding HTTP listener to ${host}:${port}...`);
-  await app.listen(port, host);
+  // Complete NestJS initialization
+  await app.init();
+  isNestInitialized = true;
+
+  const totalStartupMs = Date.now() - startupStartMs;
+  structuredLogger.log(`[Startup Stage] [${new Date().toISOString()}] NestJS initialized completely in ${totalStartupMs}ms`);
   structuredLogger.log(`🚀 Washora SaaS Backend running on http://${host}:${port}`);
   structuredLogger.log(`📖 API Documentation available at http://${host}:${port}/api/docs`);
 }

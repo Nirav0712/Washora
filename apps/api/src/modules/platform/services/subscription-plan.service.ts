@@ -27,10 +27,34 @@ export class SubscriptionPlanService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    await this.seedDefaultPlans();
+    const isDbReady = () => (this.planModel.db?.readyState as number) === 1;
+
+    if (isDbReady()) {
+      await this.seedDefaultPlans();
+    } else {
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, 2000);
+        this.planModel.db?.once('connected', () => {
+          clearTimeout(timer);
+          resolve();
+        });
+      });
+      if (isDbReady()) {
+        await this.seedDefaultPlans();
+      } else {
+        this.planModel.db?.once('connected', () => {
+          this.seedDefaultPlans().catch((err) => {
+            this.logger.warn(`Could not seed default plans: ${err?.message || err}`);
+          });
+        });
+      }
+    }
   }
 
   async seedDefaultPlans() {
+    if ((this.planModel.db?.readyState as number) !== 1) {
+      return;
+    }
     try {
       const count = await this.planModel.countDocuments();
       if (count === 0) {
