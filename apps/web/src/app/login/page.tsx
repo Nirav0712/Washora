@@ -200,8 +200,8 @@ export default function UnifiedLoginPage() {
                     roleType === 'SUPER_ADMIN'
                       ? 'admin@washora.com'
                       : roleType === 'PARTNER'
-                      ? 'partner@washora.com'
-                      : 'owner@laundry.com'
+                        ? 'partner@washora.com'
+                        : 'owner@laundry.com'
                   }
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -264,7 +264,7 @@ export default function UnifiedLoginPage() {
                 Customer Portal Login
               </Link>
             </p>
-            <p className="pt-1 border-t border-slate-100 dark:border-slate-800">
+            {/* <p className="pt-1 border-t border-slate-100 dark:border-slate-800">
               Platform Administrator?{' '}
               <a
                 href={`${(process.env.NEXT_PUBLIC_ADMIN_URL || (process.env.NODE_ENV === 'production' ? 'https://washora-myo9.vercel.app' : 'http://localhost:3002')).replace(/\/+$/, '')}/login`}
@@ -272,7 +272,7 @@ export default function UnifiedLoginPage() {
               >
                 Sign In to Platform Admin &rarr;
               </a>
-            </p>
+            </p> */}
           </div>
         </div>
       </div>
