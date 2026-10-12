@@ -83,7 +83,8 @@ export default function TenantDetail360Page() {
         localStorage.setItem('washora_impersonator_name', currentAdmin?.name || currentAdmin?.email || 'Super Admin');
         localStorage.setItem('washora_impersonator_return_url', window.location.href);
 
-        const webUrl = process.env.NEXT_PUBLIC_WEB_URL || 'http://localhost:3000';
+        const webUrl = (process.env.NEXT_PUBLIC_WEB_URL
+          || (process.env.NODE_ENV === 'production' ? 'https://washora-two.vercel.app' : 'http://localhost:3000')).replace(/\/+$/, '');
         window.open(`${webUrl}/dashboard`, '_blank');
       }
     } catch (err: any) {

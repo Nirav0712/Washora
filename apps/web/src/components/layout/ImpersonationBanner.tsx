@@ -9,18 +9,20 @@ export const ImpersonationBanner: React.FC = () => {
   const { tenant } = useAuth();
   const [isImpersonated, setIsImpersonated] = useState(false);
   const [impersonatorName, setImpersonatorName] = useState('Super Admin');
-  const [returnUrl, setReturnUrl] = useState('http://localhost:3002/tenants');
+  const defaultAdminUrl = (process.env.NEXT_PUBLIC_ADMIN_URL
+    || (process.env.NODE_ENV === 'production' ? 'https://washora-myo9.vercel.app' : 'http://localhost:3002')).replace(/\/+$/, '');
+  const [returnUrl, setReturnUrl] = useState(`${defaultAdminUrl}/tenants`);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const imp = localStorage.getItem('washora_impersonated') === 'true';
       const name = localStorage.getItem('washora_impersonator_name') || 'Super Admin';
-      const ret = localStorage.getItem('washora_impersonator_return_url') || 'http://localhost:3002/tenants';
+      const ret = localStorage.getItem('washora_impersonator_return_url') || `${defaultAdminUrl}/tenants`;
       setIsImpersonated(imp);
       setImpersonatorName(name);
       setReturnUrl(ret);
     }
-  }, []);
+  }, [defaultAdminUrl]);
 
   if (!isImpersonated) return null;
 

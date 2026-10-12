@@ -23,9 +23,23 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const router = useRouter();
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('washora_admin_token');
-    if (storedToken) {
-      setToken(storedToken);
+    let activeToken: string | null = null;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryToken = urlParams.get('token');
+      if (queryToken) {
+        localStorage.setItem('washora_admin_token', queryToken);
+        activeToken = queryToken;
+        // Clean URL to prevent leaking token in history
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      } else {
+        activeToken = localStorage.getItem('washora_admin_token');
+      }
+    }
+
+    if (activeToken) {
+      setToken(activeToken);
       AdminApiClient.getMe()
         .then((profile) => setAdmin(profile))
         .catch(() => {

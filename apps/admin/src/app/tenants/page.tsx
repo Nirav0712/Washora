@@ -107,7 +107,8 @@ export default function TenantsListPage() {
         localStorage.setItem('washora_impersonator_return_url', window.location.href);
 
         // Open shop dashboard
-        const webUrl = process.env.NEXT_PUBLIC_WEB_URL || 'http://localhost:3000';
+        const webUrl = (process.env.NEXT_PUBLIC_WEB_URL
+          || (process.env.NODE_ENV === 'production' ? 'https://washora-two.vercel.app' : 'http://localhost:3000')).replace(/\/+$/, '');
         window.open(`${webUrl}/dashboard`, '_blank');
       }
     } catch (err: any) {

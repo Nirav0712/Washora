@@ -12,6 +12,22 @@ const backendDestination = process.env.BACKEND_API_URL
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@washora/shared'],
+  async redirects() {
+    const adminUrl = (process.env.NEXT_PUBLIC_ADMIN_URL
+      || (process.env.NODE_ENV === 'production' ? 'https://washora-myo9.vercel.app' : 'http://localhost:3002')).replace(/\/+$/, '');
+    return [
+      {
+        source: '/admin',
+        destination: `${adminUrl}/login`,
+        permanent: false,
+      },
+      {
+        source: '/admin/:path*',
+        destination: `${adminUrl}/:path*`,
+        permanent: false,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {

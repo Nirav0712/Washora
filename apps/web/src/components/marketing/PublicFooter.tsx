@@ -16,6 +16,9 @@ import {
 } from 'lucide-react';
 
 export const PublicFooter: React.FC = () => {
+  const adminBaseUrl = (process.env.NEXT_PUBLIC_ADMIN_URL
+    || (process.env.NODE_ENV === 'production' ? 'https://washora-myo9.vercel.app' : 'http://localhost:3002')).replace(/\/+$/, '');
+
   return (
     <footer className="bg-slate-900 text-slate-400 pt-16 pb-12 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -61,8 +64,8 @@ export const PublicFooter: React.FC = () => {
               <li><Link href="/login" className="hover:text-cyan-400 transition">Shop Admin Login</Link></li>
               <li><Link href="/portal/login" className="hover:text-cyan-400 transition">Customer Online Portal</Link></li>
               <li><Link href="/track" className="hover:text-cyan-400 transition">Live Garment Tracker</Link></li>
-              <li><Link href="http://localhost:3002/partner-dashboard" target="_blank" className="hover:text-cyan-400 transition">Sales Partner Portal</Link></li>
-              <li><Link href="http://localhost:3002/login" target="_blank" className="hover:text-cyan-400 transition">Super Admin Center</Link></li>
+              <li><a href={`${adminBaseUrl}/partner-dashboard`} target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition">Sales Partner Portal</a></li>
+              <li><a href={`${adminBaseUrl}/login`} target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition">Super Admin Center</a></li>
               <li><Link href="/register" className="hover:text-cyan-400 transition">14-Day Free Trial</Link></li>
             </ul>
           </div>

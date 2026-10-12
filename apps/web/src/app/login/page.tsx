@@ -71,12 +71,11 @@ export default function UnifiedLoginPage() {
           localStorage.setItem('adminToken', data.data.token);
           localStorage.setItem('admin', JSON.stringify(data.data.admin));
 
-          // If partner, go to partner dashboard on admin app (port 3002)
-          if (data.data.admin.role === 'PARTNER_ADMIN') {
-            window.location.href = 'http://localhost:3002/partner-dashboard';
-          } else {
-            window.location.href = 'http://localhost:3002/';
-          }
+          // Redirect to platform admin portal (production Vercel domain or local dev port 3002)
+          const adminBaseUrl = (process.env.NEXT_PUBLIC_ADMIN_URL
+            || (process.env.NODE_ENV === 'production' ? 'https://washora-myo9.vercel.app' : 'http://localhost:3002')).replace(/\/+$/, '');
+          const targetPath = data.data.admin.role === 'PARTNER_ADMIN' ? '/partner-dashboard' : '/';
+          window.location.href = `${adminBaseUrl}${targetPath}?token=${encodeURIComponent(data.data.token)}`;
         } else {
           setError(data.message || 'Invalid platform administrator credentials');
         }
@@ -260,6 +259,15 @@ export default function UnifiedLoginPage() {
               <Link href="/portal/login" className="font-bold text-cyan-600 hover:underline">
                 Customer Portal Login
               </Link>
+            </p>
+            <p className="pt-1 border-t border-slate-100 dark:border-slate-800">
+              Platform Administrator?{' '}
+              <a
+                href={`${(process.env.NEXT_PUBLIC_ADMIN_URL || (process.env.NODE_ENV === 'production' ? 'https://washora-myo9.vercel.app' : 'http://localhost:3002')).replace(/\/+$/, '')}/login`}
+                className="font-bold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
+              >
+                Sign In to Platform Admin &rarr;
+              </a>
             </p>
           </div>
         </div>

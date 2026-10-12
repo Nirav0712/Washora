@@ -32,6 +32,7 @@ export class AdminApiClient {
 
     const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const response = await fetch(`${API_BASE}${path}`, {
+      credentials: 'include',
       ...options,
       headers,
     });
