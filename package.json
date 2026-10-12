@@ -7,15 +7,16 @@
     "packages/*"
   ],
   "scripts": {
+    "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api",
+    "build:all": "npm run build --workspaces",
+    "build:api": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:admin": "npm run build --workspace=apps/admin",
     "build:hostinger:api": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:api": "npm run start:dev --workspace=apps/api",
     "dev:api:memory": "npm run start:dev:memory --workspace=apps/api",
     "dev:admin": "npm run dev --workspace=apps/admin",
-    "build:web": "npm run build --workspace=apps/web",
-    "build:api": "npm run build --workspace=apps/api",
-    "build:admin": "npm run build --workspace=apps/admin",
-    "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces"
   },
   "keywords": [
