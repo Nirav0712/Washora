@@ -17,11 +17,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 
         return {
           uri,
+          lazyConnection: true,
           maxPoolSize: 50,
           minPoolSize: 2,
           maxIdleTimeMS: 30000,
-          serverSelectionTimeoutMS: 10000,
-          connectTimeoutMS: 10000,
+          serverSelectionTimeoutMS: 5000,
+          connectTimeoutMS: 5000,
           socketTimeoutMS: 45000,
           retryWrites: true,
           connectionFactory: (connection) => {

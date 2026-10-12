@@ -12,6 +12,18 @@ import { RateLimiterGuard } from './common/guards/rate-limiter.guard';
 
 async function bootstrap() {
   const structuredLogger = new StructuredLoggerService('Bootstrap');
+  const port = parseInt(process.env.PORT || '4000', 10);
+  const host = process.env.HOST || '0.0.0.0';
+  const nodeEnv = process.env.NODE_ENV || 'development';
+
+  structuredLogger.log(`[Startup Stage] Starting Washora API (PID=${process.pid}, NODE_ENV=${nodeEnv}, PORT=${port}, HOST=${host})`);
+
+  if (process.env.MONGODB_URI) {
+    const sanitizedUri = process.env.MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@');
+    structuredLogger.log(`[Startup Stage] Database target: ${sanitizedUri}`);
+  } else {
+    structuredLogger.warn('[Startup Stage] No MONGODB_URI detected in environment.');
+  }
 
   // 1. Environment validation
   const validation = validateEnvironment(process.env);
@@ -21,12 +33,13 @@ async function bootstrap() {
 
   if (!validation.isValid) {
     validation.errors.forEach((err) => structuredLogger.error(`[Config Error] ${err}`));
-    if (process.env.NODE_ENV === 'production') {
+    if (nodeEnv === 'production') {
       structuredLogger.fatal('Startup aborted due to invalid production environment configuration.');
       process.exit(1);
     }
   }
 
+  structuredLogger.log('[Startup Stage] Creating NestJS application context...');
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
@@ -97,10 +110,16 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = parseInt(process.env.PORT || '4000', 10);
-  await app.listen(port);
-  structuredLogger.log(`🚀 Washora SaaS Backend running on http://localhost:${port}`);
-  structuredLogger.log(`📖 API Documentation available at http://localhost:${port}/api/docs`);
+  structuredLogger.log(`[Startup Stage] Binding HTTP listener to ${host}:${port}...`);
+  await app.listen(port, host);
+  structuredLogger.log(`🚀 Washora SaaS Backend running on http://${host}:${port}`);
+  structuredLogger.log(`📖 API Documentation available at http://${host}:${port}/api/docs`);
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('[Washora Fatal Startup Error] Application bootstrap failed:', err?.message || err);
+  if (err?.stack) {
+    console.error(err.stack);
+  }
+  process.exit(1);
+});
