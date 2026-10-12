@@ -20,8 +20,20 @@ export class ApiError extends Error {
   }
 }
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const defaultApiUrl = process.env.NODE_ENV === 'production'
+  ? 'https://deeppink-ibis-194201.hostingersite.com/api'
+  : 'http://localhost:4000/api';
+
+function resolveApiBaseUrl(configuredUrl?: string): string {
+  if (!configuredUrl) return defaultApiUrl;
+  const trimmed = configuredUrl.trim().replace(/\/+$/, '');
+  if (trimmed.startsWith('/') || trimmed.endsWith('/api')) {
+    return trimmed;
+  }
+  return `${trimmed}/api`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 class ApiClient {
   private accessToken: string | null = null;

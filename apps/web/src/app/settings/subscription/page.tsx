@@ -28,7 +28,10 @@ export default function SubscriptionSettingsPage() {
     // In actual deployment, calls /api/subscriptions/current, /api/subscriptions/usage, /api/subscriptions/invoices
     // Provide responsive fallback data if API is loading or in offline mock context
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('washora_token') : null;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+    const defaultApiUrl = process.env.NODE_ENV === 'production'
+      ? 'https://deeppink-ibis-194201.hostingersite.com/api'
+      : 'http://localhost:4000/api';
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || defaultApiUrl).replace(/\/+$/, '');
 
     Promise.all([
       fetch(`${apiUrl}/subscriptions/current`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })

@@ -37,9 +37,11 @@ export default function WhatsAppSettingsPage() {
     defaultLanguage: 'en_US',
   });
 
-  const webhookCallbackUrl = typeof window !== 'undefined'
-    ? `${window.location.origin.replace(':3000', ':4000')}/api/notifications/webhooks/whatsapp`
-    : 'https://api.washora.com/api/notifications/webhooks/whatsapp';
+  const defaultApiBase = process.env.NODE_ENV === 'production'
+    ? 'https://deeppink-ibis-194201.hostingersite.com/api'
+    : 'http://localhost:4000/api';
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || defaultApiBase).replace(/\/+$/, '');
+  const webhookCallbackUrl = `${apiBase}/notifications/webhooks/whatsapp`;
 
   useEffect(() => {
     loadSettings();
