@@ -60,7 +60,7 @@ export class SupportTicket {
   @Prop({ type: Types.ObjectId, ref: 'Tenant', required: true, index: true })
   tenantId: Types.ObjectId;
 
-  @Prop({ required: true, unique: true, uppercase: true, trim: true, index: true })
+  @Prop({ required: true, uppercase: true, trim: true, index: true })
   ticketNumber: string; // e.g. TKT-10024
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
@@ -114,6 +114,7 @@ export class SupportTicket {
 
 export const SupportTicketSchema = SchemaFactory.createForClass(SupportTicket);
 
+SupportTicketSchema.index({ tenantId: 1, ticketNumber: 1 }, { unique: true });
 SupportTicketSchema.index({ tenantId: 1, status: 1 });
 SupportTicketSchema.index({ tenantId: 1, createdAt: -1 });
 SupportTicketSchema.index({ status: 1, createdAt: -1 });

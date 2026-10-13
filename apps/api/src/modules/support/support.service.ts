@@ -56,7 +56,8 @@ export class SupportService {
     const uId = new Types.ObjectId(userId);
 
     const seq = await this.counterService.getNextSequence(tId, 'SUPPORT_TICKET');
-    const ticketNumber = `TKT-${String(seq).padStart(5, '0')}`;
+    const tenantSuffix = tId.toString().slice(-4).toUpperCase();
+    const ticketNumber = `TKT-${tenantSuffix}-${String(seq).padStart(5, '0')}`;
 
     const initialMessage = {
       senderId: uId,
