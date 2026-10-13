@@ -113,3 +113,21 @@ export class RejectSalaryAdvanceDto {
   @IsNotEmpty()
   rejectionReason: string;
 }
+
+export class DisbursePayrollDto {
+  @ApiPropertyOptional({ example: 'BANK_TRANSFER', description: 'Payment method (e.g. BANK_TRANSFER, UPI, CASH, CHEQUE)' })
+  @IsOptional()
+  @IsString()
+  paymentMethod?: string;
+
+  @ApiPropertyOptional({ example: 'NEFT-20261015-8849', description: 'Payment or bank transaction reference number' })
+  @IsOptional()
+  @IsString()
+  disbursementReference?: string;
+
+  @ApiPropertyOptional({ example: 'October staff monthly salaries processed via corporate banking' })
+  @IsOptional()
+  @IsString()
+  disbursementNotes?: string;
+}
+

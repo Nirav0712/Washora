@@ -47,9 +47,14 @@ export default function UnifiedLoginPage() {
           tenantSlug: tenantSlug.trim() || undefined,
         }),
       });
-      const shopData = await shopRes.json();
+      let shopData: any = null;
+      try {
+        shopData = await shopRes.json();
+      } catch {
+        shopData = null;
+      }
 
-      if (shopData.success && shopData.data?.accessToken) {
+      if (shopRes.ok && shopData?.success && shopData.data?.accessToken) {
         localStorage.setItem('accessToken', shopData.data.accessToken);
         localStorage.setItem('token', shopData.data.accessToken);
         localStorage.setItem('refreshToken', shopData.data.refreshToken || '');
@@ -63,29 +68,40 @@ export default function UnifiedLoginPage() {
       }
 
       // 2. If shop auth fails, automatically try Platform Admin / Sales Partner authentication
-      const platformRes = await fetch('/api/platform/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail, password }),
-      });
-      const platformData = await platformRes.json();
+      let platformData: any = null;
+      try {
+        const platformRes = await fetch('/api/platform/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail, password }),
+        });
+        platformData = await platformRes.json().catch(() => null);
 
-      if (platformData.success && platformData.data?.token) {
-        localStorage.setItem('adminToken', platformData.data.token);
-        localStorage.setItem('admin', JSON.stringify(platformData.data.admin));
+        if (platformRes.ok && platformData?.success && platformData.data?.token) {
+          localStorage.setItem('adminToken', platformData.data.token);
+          localStorage.setItem('admin', JSON.stringify(platformData.data.admin));
 
-        // Redirect to platform admin portal with token handover
-        const adminBaseUrl = (process.env.NEXT_PUBLIC_ADMIN_URL
-          || (process.env.NODE_ENV === 'production' ? 'https://washora-myo9.vercel.app' : 'http://localhost:3002')).replace(/\/+$/, '');
-        const targetPath = platformData.data.admin?.role === 'PARTNER_ADMIN' ? '/partner-dashboard' : '/';
-        window.location.href = `${adminBaseUrl}${targetPath}?token=${encodeURIComponent(platformData.data.token)}`;
-        return;
+          // Redirect to platform admin portal with token handover
+          const adminBaseUrl = (process.env.NEXT_PUBLIC_ADMIN_URL
+            || (process.env.NODE_ENV === 'production' ? 'https://washora-myo9.vercel.app' : 'http://localhost:3002')).replace(/\/+$/, '');
+          const targetPath = platformData.data.admin?.role === 'PARTNER_ADMIN' ? '/partner-dashboard' : '/';
+          window.location.href = `${adminBaseUrl}${targetPath}?token=${encodeURIComponent(platformData.data.token)}`;
+          return;
+        }
+      } catch {
+        platformData = null;
       }
 
       // If both fail, display error message
-      setError(shopData.message || platformData.message || 'Invalid email or password');
+      setError(
+        shopData?.message ||
+        platformData?.message ||
+        (shopRes.status >= 500
+          ? 'Backend service is starting or temporarily unavailable. Please retry in a moment.'
+          : 'Invalid email or password')
+      );
     } catch (err: any) {
-      setError(err.message || 'Network error during login');
+      setError(err?.message || 'Network error during login');
     } finally {
       setIsLoading(false);
     }

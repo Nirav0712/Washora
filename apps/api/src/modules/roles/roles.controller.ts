@@ -62,7 +62,9 @@ export class RolesController {
     }
     const rawId = req.tenantId || req.user?.tenantId;
     const tenantId = new Types.ObjectId(rawId);
-    return this.rolesService.createCustomRole(tenantId, dto);
+    const actorRole = req.user?.role || req.user?.roleCode;
+    const actorPermissions = req.user?.permissions || [];
+    return this.rolesService.createCustomRole(tenantId, dto, actorRole, actorPermissions);
   }
 
   @Patch(':id')
@@ -75,7 +77,9 @@ export class RolesController {
   ) {
     const rawId = req.tenantId || req.user?.tenantId;
     const tenantId = new Types.ObjectId(rawId);
-    return this.rolesService.updateCustomRole(id, tenantId, dto);
+    const actorRole = req.user?.role || req.user?.roleCode;
+    const actorPermissions = req.user?.permissions || [];
+    return this.rolesService.updateCustomRole(id, tenantId, dto, actorRole, actorPermissions);
   }
 
   @Delete(':id')

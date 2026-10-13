@@ -52,6 +52,18 @@ export class PayrollPeriod {
 
   @Prop()
   paidAt?: Date;
+
+  @Prop({ type: Types.ObjectId, ref: 'User' })
+  paidBy?: Types.ObjectId;
+
+  @Prop({ trim: true })
+  paymentMethod?: string; // e.g. BANK_TRANSFER, UPI, CASH, CHEQUE
+
+  @Prop({ trim: true })
+  disbursementReference?: string;
+
+  @Prop({ trim: true })
+  disbursementNotes?: string;
 }
 
 export const PayrollPeriodSchema = SchemaFactory.createForClass(PayrollPeriod);

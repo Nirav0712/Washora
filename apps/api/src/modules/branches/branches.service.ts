@@ -2,10 +2,13 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Branch, BranchDocument } from '../../schemas/branch.schema';
+import { TenantSubscription, TenantSubscriptionDocument } from '../../schemas/tenant-subscription.schema';
+import { LimitKey, SubscriptionStatus } from '@washora/shared';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
 import { AuditService } from '../audit/audit.service';
@@ -14,6 +17,7 @@ import { AuditService } from '../audit/audit.service';
 export class BranchesService {
   constructor(
     @InjectModel(Branch.name) private branchModel: Model<BranchDocument>,
+    @InjectModel(TenantSubscription.name) private subscriptionModel: Model<TenantSubscriptionDocument>,
     private auditService: AuditService,
   ) {}
 
@@ -50,6 +54,31 @@ export class BranchesService {
     dto: CreateBranchDto,
   ): Promise<BranchDocument> {
     const tId = new Types.ObjectId(tenantId.toString());
+
+    // 1. Verify tenant subscription branch quota limit
+    const sub = await this.subscriptionModel
+      .findOne({
+        tenantId: tId,
+        status: SubscriptionStatus.ACTIVE,
+      })
+      .populate('planId')
+      .exec();
+
+    if (sub && sub.planId) {
+      const plan = sub.planId as any;
+      const maxBranches = plan?.limits?.[LimitKey.MAX_BRANCHES];
+      if (typeof maxBranches === 'number' && maxBranches > 0) {
+        const activeCount = await this.branchModel.countDocuments({
+          tenantId: tId,
+          isDeleted: false,
+        });
+        if (activeCount >= maxBranches) {
+          throw new ForbiddenException(
+            `Branch creation denied: your plan "${plan.name}" allows a maximum of ${maxBranches} branch(es). You currently have ${activeCount}. Please upgrade your subscription to add more branches.`,
+          );
+        }
+      }
+    }
 
     // Check code uniqueness within tenant
     const existing = await this.branchModel

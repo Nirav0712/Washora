@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { TenantGuard } from '../../common/guards/tenant.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { PermissionCode, RoleType } from '@washora/shared';
@@ -35,11 +36,12 @@ import {
   CreateSalaryAdvanceDto,
   ApproveSalaryAdvanceDto,
   RejectSalaryAdvanceDto,
+  DisbursePayrollDto,
 } from './dto/payroll.dto';
 
 @ApiTags('Staff & Workforce')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, TenantGuard, PermissionsGuard)
 @Controller()
 export class StaffController {
   constructor(
@@ -51,7 +53,7 @@ export class StaffController {
   ) {}
 
   private getTenantId(req: any): string {
-    return req.user?.membership?.tenantId || req.user?.tenantId;
+    return req.tenantId || req.user?.tenantId || req.user?.membership?.tenantId;
   }
 
   private getUserId(req: any): string {
@@ -427,6 +429,24 @@ export class StaffController {
     const tenantId = this.getTenantId(req);
     const userId = this.getUserId(req);
     return this.payrollService.approvePayrollPeriod(tenantId, id, userId);
+  }
+
+  @Post('payroll/periods/:id/disburse')
+  @RequirePermissions(PermissionCode.PAYROLL_APPROVE)
+  @ApiOperation({ summary: 'Disburse payroll period and record payout references' })
+  async disbursePayroll(@Req() req: any, @Param('id') id: string, @Body() dto: DisbursePayrollDto) {
+    const tenantId = this.getTenantId(req);
+    const userId = this.getUserId(req);
+    return this.payrollService.disbursePayrollPeriod(tenantId, id, dto, userId);
+  }
+
+  @Get('payroll/records/:recordId/payslip')
+  @RequirePermissions(PermissionCode.PAYROLL_VIEW)
+  @ApiOperation({ summary: 'Generate formatted printable payslip for payroll record' })
+  async getPayslip(@Req() req: any, @Param('recordId') recordId: string) {
+    const tenantId = this.getTenantId(req);
+    const userBranchIds = this.getUserBranchIds(req);
+    return this.payrollService.getPayslip(tenantId, recordId, userBranchIds);
   }
 
   @Get('payroll/periods/:id/records')

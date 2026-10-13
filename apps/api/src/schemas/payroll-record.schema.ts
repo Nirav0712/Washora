@@ -77,6 +77,15 @@ export class PayrollRecord {
     index: true,
   })
   status: PayrollPeriodStatus;
+
+  @Prop()
+  paidAt?: Date;
+
+  @Prop({ trim: true })
+  paymentMethod?: string;
+
+  @Prop({ trim: true })
+  paymentReference?: string;
 }
 
 export const PayrollRecordSchema = SchemaFactory.createForClass(PayrollRecord);

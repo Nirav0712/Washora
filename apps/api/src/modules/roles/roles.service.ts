@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Role, RoleDocument } from '../../schemas/role.schema';
@@ -303,7 +303,20 @@ export class RolesService {
   async createCustomRole(
     tenantId: Types.ObjectId,
     data: { name: string; description?: string; permissions: string[] },
+    actorRole?: string,
+    actorPermissions: string[] = [],
   ): Promise<RoleDocument> {
+    if (actorRole && actorRole !== RoleType.SHOP_OWNER && actorRole !== RoleType.SUPER_ADMIN) {
+      const unauthorized = (data.permissions || []).filter(
+        (p) => !actorPermissions.includes(p) && !actorPermissions.includes('*'),
+      );
+      if (unauthorized.length > 0) {
+        throw new ForbiddenException(
+          `Privilege escalation rejected: you cannot grant permissions beyond your own authority (${unauthorized.join(', ')})`,
+        );
+      }
+    }
+
     const code = `CUSTOM_${data.name.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_${Date.now().toString().slice(-4)}`;
 
     const role = new this.roleModel({
@@ -322,14 +335,27 @@ export class RolesService {
     id: string,
     tenantId: Types.ObjectId,
     data: { name?: string; description?: string; permissions?: string[] },
+    actorRole?: string,
+    actorPermissions: string[] = [],
   ): Promise<RoleDocument> {
     const role = await this.roleModel.findOne({ _id: id, tenantId }).exec();
     if (!role) {
-      throw new Error('Role not found or belongs to another tenant');
+      throw new NotFoundException('Role not found or belongs to another tenant');
     }
 
     if (role.isSystem && role.code === RoleType.SHOP_OWNER) {
-      throw new Error('Primary Shop Owner role cannot be modified');
+      throw new ForbiddenException('Primary Shop Owner role cannot be modified');
+    }
+
+    if (data.permissions && actorRole && actorRole !== RoleType.SHOP_OWNER && actorRole !== RoleType.SUPER_ADMIN) {
+      const unauthorized = data.permissions.filter(
+        (p) => !actorPermissions.includes(p) && !actorPermissions.includes('*'),
+      );
+      if (unauthorized.length > 0) {
+        throw new ForbiddenException(
+          `Privilege escalation rejected: you cannot grant permissions beyond your own authority (${unauthorized.join(', ')})`,
+        );
+      }
     }
 
     if (data.name) role.name = data.name;
@@ -342,11 +368,11 @@ export class RolesService {
   async deleteCustomRole(id: string, tenantId: Types.ObjectId): Promise<{ success: boolean }> {
     const role = await this.roleModel.findOne({ _id: id, tenantId }).exec();
     if (!role) {
-      throw new Error('Role not found or belongs to another tenant');
+      throw new NotFoundException('Role not found or belongs to another tenant');
     }
 
     if (role.isSystem) {
-      throw new Error('Built-in system roles cannot be deleted');
+      throw new ForbiddenException('Built-in system roles cannot be deleted');
     }
 
     await this.roleModel.deleteOne({ _id: id, tenantId }).exec();

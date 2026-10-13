@@ -794,13 +794,19 @@ export class OrdersService {
   }
 
   async getInvoiceData(tenantId: string | Types.ObjectId, id: string) {
-    const order = await this.findById(tenantId, id);
-    const settings = await this.settingsModel.findOne({ tenantId: new Types.ObjectId(tenantId.toString()) }).exec();
+    const tId = new Types.ObjectId(tenantId.toString());
+    const order = await this.findById(tId, id);
+    const settings = await this.settingsModel.findOne({ tenantId: tId }).exec();
+
+    const receipt = (settings?.receiptSettings as any) || {};
 
     return {
       order,
       invoiceNumber: order.orderNumber,
       invoiceDate: order.createdAt,
+      invoiceTitle: receipt.invoiceTitle || 'TAX INVOICE',
+      paperSize: receipt.paperSize || 'A4',
+      logoUrl: receipt.logoUrl || '',
       currency: settings?.currency || 'INR',
       currencySymbol: settings?.currencySymbol || '₹',
       shopSettings: {

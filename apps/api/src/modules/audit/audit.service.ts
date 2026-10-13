@@ -46,7 +46,7 @@ export class AuditService {
 
   async findByTenant(
     tenantId: string | Types.ObjectId,
-    options: { limit?: number; page?: number; entity?: string } = {},
+    options: { limit?: number; page?: number; entity?: string; action?: string; branchId?: string } = {},
   ) {
     const limit = Math.min(options.limit || 50, 100);
     const page = Math.max(options.page || 1, 1);
@@ -59,10 +59,18 @@ export class AuditService {
     if (options.entity) {
       filter.entity = options.entity;
     }
+    if (options.action) {
+      filter.action = options.action;
+    }
+    if (options.branchId && Types.ObjectId.isValid(options.branchId)) {
+      filter.branchId = new Types.ObjectId(options.branchId);
+    }
 
     const [items, total] = await Promise.all([
       this.auditLogModel
         .find(filter)
+        .populate('actorUserId', 'name email avatar')
+        .populate('branchId', 'name code')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

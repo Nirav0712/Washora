@@ -58,4 +58,30 @@ export class GarmentsController {
   ) {
     return this.garmentsService.update(req.tenantId, id, req.user.userId, dto);
   }
+
+  @Get('garments/scan/:code')
+  @ApiOperation({ summary: 'Scan barcode/QR code to lookup garment item or order' })
+  @RequirePermissions(PermissionCode.GARMENT_VIEW)
+  async scanCode(@Req() req: any, @Param('code') code: string) {
+    const userBranchIds = req.userBranchIds || [];
+    return this.garmentsService.scan(req.tenantId, code, userBranchIds);
+  }
+
+  @Post('garments/scan/transition')
+  @ApiOperation({ summary: 'Scan barcode to rapidly advance workstation processing stage' })
+  @RequirePermissions(PermissionCode.GARMENT_UPDATE)
+  async scanTransition(
+    @Req() req: any,
+    @Body() body: { code: string; stage: any; notes?: string },
+  ) {
+    const userBranchIds = req.userBranchIds || [];
+    return this.garmentsService.scanTransition(
+      req.tenantId,
+      body.code,
+      body.stage,
+      req.user.userId,
+      body.notes,
+      userBranchIds,
+    );
+  }
 }

@@ -32,6 +32,7 @@ import {
   Navigation,
   MessageSquare,
   ShieldCheck,
+  LifeBuoy,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
@@ -68,6 +69,7 @@ export const Sidebar: React.FC = () => {
     { name: 'Purchases', href: '/purchases', icon: ShoppingBag, badge: '' },
     { name: 'Payments & Due', href: '/payments', icon: CreditCard, badge: '' },
     { name: 'Analytics & Reports', href: '/reports', icon: BarChart3, badge: '' },
+    { name: 'Support & Helpdesk', href: '/support', icon: LifeBuoy, badge: '24/7' },
     { name: 'Settings', href: '/settings', icon: Settings, badge: '' },
   ];
 

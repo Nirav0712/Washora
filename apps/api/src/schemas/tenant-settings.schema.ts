@@ -48,20 +48,36 @@ export class TenantSettings {
 
   @Prop({
     type: {
+      invoiceTitle: { type: String, default: 'TAX INVOICE' },
+      paperSize: { type: String, enum: ['A4', 'THERMAL_80MM', 'THERMAL_58MM'], default: 'A4' },
+      logoUrl: { type: String, default: '' },
       headerText: { type: String, default: 'Thank you for choosing Washora' },
       footerText: { type: String, default: 'Please collect garments within 15 days' },
       showGstNumber: { type: Boolean, default: true },
       showTermsAndConditions: { type: Boolean, default: true },
+      showQrCode: { type: Boolean, default: true },
+      showBarcode: { type: Boolean, default: true },
+      showCustomerGstin: { type: Boolean, default: true },
+      showStoreContact: { type: Boolean, default: true },
       terms: { type: String, default: 'Washora is not liable for color bleeding on delicate unlabelled fabrics.' },
+      customFooter: { type: String, default: 'For inquiries or pick-up updates, please reach out to our counter.' },
     },
     default: {},
   })
   receiptSettings?: {
+    invoiceTitle?: string;
+    paperSize?: 'A4' | 'THERMAL_80MM' | 'THERMAL_58MM';
+    logoUrl?: string;
     headerText?: string;
     footerText?: string;
     showGstNumber: boolean;
     showTermsAndConditions: boolean;
+    showQrCode?: boolean;
+    showBarcode?: boolean;
+    showCustomerGstin?: boolean;
+    showStoreContact?: boolean;
     terms?: string;
+    customFooter?: string;
   };
 
   @Prop({

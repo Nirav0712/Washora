@@ -25,6 +25,8 @@ import { AttendanceRecord, AttendanceRecordDocument } from '../../schemas/attend
 import { ProcessingJob, ProcessingJobDocument } from '../../schemas/processing-job.schema';
 import { QualityCheck, QualityCheckDocument } from '../../schemas/quality-check.schema';
 import { SalaryRecord, SalaryRecordDocument } from '../../schemas/salary-record.schema';
+import { TenantSubscription, TenantSubscriptionDocument } from '../../schemas/tenant-subscription.schema';
+import { LimitKey, SubscriptionStatus } from '@washora/shared';
 import { CounterService } from '../../common/services/counter.service';
 import { AuditService } from '../audit/audit.service';
 import { PasswordUtil } from '../../common/utils/password.util';
@@ -54,6 +56,8 @@ export class StaffService {
     private qcModel: Model<QualityCheckDocument>,
     @InjectModel(SalaryRecord.name)
     private salaryRecordModel: Model<SalaryRecordDocument>,
+    @InjectModel(TenantSubscription.name)
+    private subscriptionModel: Model<TenantSubscriptionDocument>,
     private counterService: CounterService,
     private auditService: AuditService,
     private rolesService: RolesService,
@@ -72,6 +76,32 @@ export class StaffService {
 
   async create(tenantId: string | Types.ObjectId, dto: CreateStaffDto, actorUserId?: string): Promise<StaffProfileDocument> {
     const tId = new Types.ObjectId(tenantId.toString());
+
+    // 1. Verify tenant subscription staff quota limit
+    const sub = await this.subscriptionModel
+      .findOne({
+        tenantId: tId,
+        status: SubscriptionStatus.ACTIVE,
+      })
+      .populate('planId')
+      .exec();
+
+    if (sub && sub.planId) {
+      const plan = sub.planId as any;
+      const maxStaff = plan?.limits?.[LimitKey.MAX_STAFF];
+      if (typeof maxStaff === 'number' && maxStaff > 0) {
+        const activeStaffCount = await this.staffModel.countDocuments({
+          tenantId: tId,
+          isDeleted: false,
+        });
+        if (activeStaffCount >= maxStaff) {
+          throw new ForbiddenException(
+            `Staff creation denied: your plan "${plan.name}" allows a maximum of ${maxStaff} staff member(s). You currently have ${activeStaffCount}. Please upgrade your subscription to add more staff.`,
+          );
+        }
+      }
+    }
+
     const primaryBranchId = new Types.ObjectId(dto.primaryBranchId);
 
     // Verify branch belongs to tenant

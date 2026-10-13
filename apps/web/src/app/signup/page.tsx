@@ -90,8 +90,14 @@ export default function ShopOwnerSignupPage() {
         }),
       });
 
-      const data = await res.json();
-      if (data.success && data.data?.accessToken) {
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+
+      if (res.ok && data?.success && data.data?.accessToken) {
         localStorage.setItem('accessToken', data.data.accessToken);
         localStorage.setItem('token', data.data.accessToken);
         localStorage.setItem('washora_access_token', data.data.accessToken);
@@ -101,10 +107,16 @@ export default function ShopOwnerSignupPage() {
 
         router.push('/dashboard');
       } else {
-        setError(data.message || 'Registration failed. Please check the details.');
+        const message =
+          data?.message ||
+          data?.error?.message ||
+          (res.status >= 500
+            ? 'Backend service is starting or temporarily unavailable. Please retry in a moment.'
+            : 'Registration failed. Please check the details provided.');
+        setError(message);
       }
     } catch (err: any) {
-      setError(err.message || 'Network error during registration');
+      setError(err?.message || 'Network error during registration');
     } finally {
       setIsLoading(false);
     }

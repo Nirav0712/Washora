@@ -59,6 +59,8 @@ import { PlatformDashboardController } from './controllers/platform-dashboard.co
 
 import { PlatformReportsService } from './services/platform-reports.service';
 import { PlatformReportsController } from './controllers/platform-reports.controller';
+import { SupportModule } from '../support/support.module';
+import { PlatformSupportController } from './controllers/platform-support.controller';
 
 @Module({
   imports: [
@@ -93,6 +95,7 @@ import { PlatformReportsController } from './controllers/platform-reports.contro
     }),
     AuditModule,
     ConfigModule,
+    SupportModule,
   ],
   controllers: [
     PlatformAuthController,
@@ -107,6 +110,7 @@ import { PlatformReportsController } from './controllers/platform-reports.contro
     PlatformSystemHealthController,
     PlatformDashboardController,
     PlatformReportsController,
+    PlatformSupportController,
   ],
   providers: [
     PlatformAuthService,

@@ -22,6 +22,9 @@ import { SalaryAdvance, SalaryAdvanceDocument } from '../../schemas/salary-advan
 import { StaffProfile, StaffProfileDocument } from '../../schemas/staff-profile.schema';
 import { AttendanceRecord, AttendanceRecordDocument } from '../../schemas/attendance-record.schema';
 import { LeaveRequest, LeaveRequestDocument } from '../../schemas/leave-request.schema';
+import { Tenant, TenantDocument } from '../../schemas/tenant.schema';
+import { TenantSettings, TenantSettingsDocument } from '../../schemas/tenant-settings.schema';
+import { Branch, BranchDocument } from '../../schemas/branch.schema';
 import { PayrollCalculatorService } from './payroll-calculator.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -30,6 +33,7 @@ import {
   CreateSalaryAdvanceDto,
   ApproveSalaryAdvanceDto,
   RejectSalaryAdvanceDto,
+  DisbursePayrollDto,
 } from './dto/payroll.dto';
 
 @Injectable()
@@ -51,6 +55,12 @@ export class PayrollService {
     private attendanceModel: Model<AttendanceRecordDocument>,
     @InjectModel(LeaveRequest.name)
     private leaveRequestModel: Model<LeaveRequestDocument>,
+    @InjectModel(Tenant.name)
+    private tenantModel: Model<TenantDocument>,
+    @InjectModel(TenantSettings.name)
+    private tenantSettingsModel: Model<TenantSettingsDocument>,
+    @InjectModel(Branch.name)
+    private branchModel: Model<BranchDocument>,
     private payrollCalculator: PayrollCalculatorService,
     private auditService: AuditService,
   ) {}
@@ -383,6 +393,187 @@ export class PayrollService {
     });
 
     return saved;
+  }
+
+  async disbursePayrollPeriod(
+    tenantId: string | Types.ObjectId,
+    id: string,
+    dto: DisbursePayrollDto,
+    actorUserId: string,
+  ): Promise<PayrollPeriodDocument> {
+    const tId = new Types.ObjectId(tenantId.toString());
+    const period = await this.payrollPeriodModel.findOne({ _id: new Types.ObjectId(id), tenantId: tId }).exec();
+    if (!period) {
+      throw new NotFoundException(`Payroll period ${id} not found`);
+    }
+
+    if (period.status !== PayrollPeriodStatus.APPROVED) {
+      throw new BadRequestException(
+        `Cannot disburse payroll period in ${period.status} status. It must be in APPROVED status first.`,
+      );
+    }
+
+    const disburseDate = new Date();
+    const paymentMethod = dto.paymentMethod?.trim() || 'BANK_TRANSFER';
+    const ref = dto.disbursementReference?.trim() || `DISB-${period._id.toString().slice(-6).toUpperCase()}`;
+
+    period.status = PayrollPeriodStatus.PAID;
+    period.paidAt = disburseDate;
+    period.paidBy = new Types.ObjectId(actorUserId);
+    period.paymentMethod = paymentMethod;
+    period.disbursementReference = ref;
+    if (dto.disbursementNotes) {
+      period.disbursementNotes = dto.disbursementNotes.trim();
+    }
+
+    // Mark individual snapshot records as PAID
+    await this.payrollRecordModel.updateMany(
+      { tenantId: tId, payrollPeriodId: period._id },
+      {
+        status: PayrollPeriodStatus.PAID,
+        paidAt: disburseDate,
+        paymentMethod: paymentMethod,
+        paymentReference: ref,
+      },
+    ).exec();
+
+    const saved = await period.save();
+
+    await this.auditService.log({
+      tenantId: tId,
+      actorUserId,
+      action: 'PAYROLL_DISBURSED',
+      entity: 'PayrollPeriod',
+      entityId: id,
+      metadata: {
+        name: period.name,
+        totalNet: period.totalNet,
+        paymentMethod,
+        disbursementReference: ref,
+      },
+    });
+
+    return saved;
+  }
+
+  async getPayslip(
+    tenantId: string | Types.ObjectId,
+    recordId: string,
+    userBranchIds?: string[],
+  ): Promise<any> {
+    const tId = new Types.ObjectId(tenantId.toString());
+    const record = await this.payrollRecordModel
+      .findOne({ _id: new Types.ObjectId(recordId), tenantId: tId })
+      .populate({
+        path: 'staffId',
+        select: 'employeeCode designation department bankDetails panNumber uanNumber',
+        populate: { path: 'userId', select: 'name email phone avatar' },
+      })
+      .populate('branchId', 'name code address city phone')
+      .populate('payrollPeriodId', 'name startDate endDate status paidAt paymentMethod disbursementReference')
+      .lean()
+      .exec();
+
+    if (!record) {
+      throw new NotFoundException(`Payroll record ${recordId} not found`);
+    }
+
+    if (userBranchIds && userBranchIds.length > 0) {
+      const bId = (record.branchId as any)?._id?.toString() || record.branchId?.toString();
+      if (!userBranchIds.includes(bId)) {
+        throw new ForbiddenException('Access denied to payroll record in this branch');
+      }
+    }
+
+    const [tenant, tenantSettings] = await Promise.all([
+      this.tenantModel.findById(tId).lean().exec(),
+      this.tenantSettingsModel.findOne({ tenantId: tId }).lean().exec(),
+    ]);
+
+    const staff: any = record.staffId || {};
+    const user: any = staff.userId || {};
+    const branch: any = record.branchId || {};
+    const period: any = record.payrollPeriodId || {};
+
+    return {
+      payslipNumber: `PS-${record._id.toString().slice(-8).toUpperCase()}`,
+      payrollRecordId: record._id,
+      generatedAt: new Date(),
+      period: {
+        id: period._id,
+        name: period.name,
+        startDate: period.startDate,
+        endDate: period.endDate,
+        status: record.status || period.status,
+        paidAt: record.paidAt || period.paidAt,
+        paymentMethod: record.paymentMethod || period.paymentMethod || 'BANK_TRANSFER',
+        paymentReference: record.paymentReference || period.disbursementReference,
+      },
+      tenant: {
+        id: tId,
+        name: tenant?.name || 'Washora Laundry',
+        logoUrl: (tenantSettings as any)?.receiptSettings?.logoUrl || tenant?.logo,
+        address: tenant?.address,
+        phone: tenant?.phone,
+        email: tenant?.email,
+        gstin: (tenant as any)?.gstNumber || (tenant as any)?.taxRegistrationNumber,
+        currencySymbol: tenantSettings?.currencySymbol || '₹',
+      },
+      employee: {
+        staffId: staff._id,
+        name: user.name || 'Employee',
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+        employeeCode: staff.employeeCode,
+        designation: staff.designation,
+        department: staff.department,
+        bankDetails: staff.bankDetails,
+        panNumber: staff.panNumber,
+        uanNumber: staff.uanNumber,
+      },
+      branch: {
+        id: branch._id,
+        name: branch.name,
+        code: branch.code,
+        address: branch.address,
+        city: branch.city,
+        phone: branch.phone,
+      },
+      attendance: {
+        workingDays: record.workingDays,
+        presentDays: record.presentDays,
+        leaveDays: record.leaveDays,
+        absentDays: record.absentDays,
+        regularHours: record.regularHours,
+        overtimeHours: record.overtimeHours,
+      },
+      earnings: {
+        baseSalary: record.baseSalary / 100,
+        overtimeAmount: record.overtimeAmount / 100,
+        allowances: (record.allowances || []).map((a: any) => ({
+          name: a.name,
+          amount: a.amount / 100,
+        })),
+        totalAllowances: record.totalAllowances / 100,
+        grossSalary: record.grossSalary / 100,
+      },
+      deductions: {
+        deductions: (record.deductions || []).map((d: any) => ({
+          name: d.name,
+          amount: d.amount / 100,
+        })),
+        advanceDeduction: record.advanceAmount / 100,
+        totalDeductions: (record.totalDeductions + record.advanceAmount) / 100,
+      },
+      netSalary: record.netSalary / 100,
+      rawPaise: {
+        baseSalary: record.baseSalary,
+        grossSalary: record.grossSalary,
+        totalDeductions: record.totalDeductions + record.advanceAmount,
+        netSalary: record.netSalary,
+      },
+    };
   }
 
   async getPayrollRecordsForPeriod(

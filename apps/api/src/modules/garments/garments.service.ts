@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -178,5 +179,113 @@ export class GarmentsService {
     });
 
     return this.findById(tId, garment._id.toString());
+  }
+
+  async scan(
+    tenantId: string | Types.ObjectId,
+    rawCode: string,
+    userBranchIds: string[] = [],
+  ): Promise<any> {
+    if (!rawCode || !rawCode.trim()) {
+      throw new BadRequestException('Scan code cannot be empty.');
+    }
+    const tId = new Types.ObjectId(tenantId.toString());
+    const code = rawCode.trim().toUpperCase();
+
+    // 1. Try finding garment by barcode, garmentNumber, or ObjectId
+    const garmentFilter: any = {
+      tenantId: tId,
+      isDeleted: false,
+      $or: [
+        { barcode: code },
+        { garmentNumber: code },
+        { qrCode: code },
+      ],
+    };
+
+    if (Types.ObjectId.isValid(rawCode.trim())) {
+      garmentFilter.$or.push({ _id: new Types.ObjectId(rawCode.trim()) });
+    }
+
+    const garment = await this.garmentModel
+      .findOne(garmentFilter)
+      .populate('orderId', 'orderNumber status paymentStatus customerSnapshot grandTotal dueAmount')
+      .populate('branchId', 'name code')
+      .populate('productId', 'name')
+      .populate('serviceId', 'name')
+      .exec();
+
+    if (garment) {
+      if (userBranchIds && userBranchIds.length > 0) {
+        const garmentBranchId = (garment.branchId as any)?._id?.toString() || garment.branchId?.toString();
+        if (!userBranchIds.includes(garmentBranchId)) {
+          throw new ForbiddenException('You do not have access to the branch this garment belongs to.');
+        }
+      }
+      return {
+        type: 'GARMENT',
+        item: {
+          ...garment.toObject(),
+          id: garment._id.toString(),
+        },
+      };
+    }
+
+    // 2. If no garment, check if code matches an order
+    const orderFilter: any = {
+      tenantId: tId,
+      isDeleted: false,
+      $or: [
+        { orderNumber: code },
+        { barcode: code },
+      ],
+    };
+    if (Types.ObjectId.isValid(rawCode.trim())) {
+      orderFilter.$or.push({ _id: new Types.ObjectId(rawCode.trim()) });
+    }
+
+    const order = await this.orderModel
+      .findOne(orderFilter)
+      .populate('branchId', 'name code')
+      .populate('garmentIds')
+      .exec();
+
+    if (order) {
+      if (userBranchIds && userBranchIds.length > 0) {
+        const orderBranchId = (order.branchId as any)?._id?.toString() || order.branchId?.toString();
+        if (!userBranchIds.includes(orderBranchId)) {
+          throw new ForbiddenException('You do not have access to the branch this order belongs to.');
+        }
+      }
+      return {
+        type: 'ORDER',
+        item: {
+          ...order.toObject(),
+          id: order._id.toString(),
+        },
+      };
+    }
+
+    throw new NotFoundException(`No garment or order found matching scanned code: ${rawCode}`);
+  }
+
+  async scanTransition(
+    tenantId: string | Types.ObjectId,
+    rawCode: string,
+    targetStage: ProcessingStage,
+    actorUserId: string | Types.ObjectId,
+    notes?: string,
+    userBranchIds: string[] = [],
+  ): Promise<any> {
+    const scanResult = await this.scan(tenantId, rawCode, userBranchIds);
+    if (scanResult.type !== 'GARMENT') {
+      throw new BadRequestException('Scan transition can only be applied to a specific garment.');
+    }
+
+    const garmentId = scanResult.item.id;
+    return this.update(tenantId, garmentId, actorUserId, {
+      stage: targetStage,
+      conditionNotes: notes,
+    });
   }
 }

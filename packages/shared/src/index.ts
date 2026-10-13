@@ -229,6 +229,11 @@ export enum PermissionCode {
   NOTIFICATION_SETTINGS_VIEW = 'notification.settings.view',
   NOTIFICATION_SETTINGS_MANAGE = 'notification.settings.manage',
   NOTIFICATION_REPORT = 'notification.report',
+
+  // Support & Helpdesk
+  SUPPORT_VIEW = 'support.view',
+  SUPPORT_CREATE = 'support.create',
+  SUPPORT_MANAGE = 'support.manage',
 }
 
 // Backwards compatibility enum alias
@@ -2273,6 +2278,8 @@ export enum PlatformPermission {
   USAGE_VIEW = 'platform.usage.view',
   AUDIT_VIEW = 'platform.audit.view',
   SYSTEM_HEALTH_VIEW = 'platform.system_health.view',
+  SUPPORT_VIEW = 'platform.support.view',
+  SUPPORT_MANAGE = 'platform.support.manage',
 }
 
 export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Record<PlatformAdminRole, PlatformPermission[]> = {
@@ -2315,6 +2322,8 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Record<PlatformAdminRole, Platfo
     PlatformPermission.SUBSCRIPTIONS_VIEW,
     PlatformPermission.USAGE_VIEW,
     PlatformPermission.SYSTEM_HEALTH_VIEW,
+    PlatformPermission.SUPPORT_VIEW,
+    PlatformPermission.SUPPORT_MANAGE,
   ],
   [PlatformAdminRole.BILLING_ADMIN]: [
     PlatformPermission.DASHBOARD_VIEW,

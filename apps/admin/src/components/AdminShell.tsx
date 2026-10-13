@@ -17,6 +17,7 @@ import {
   User,
   Shield,
   Sparkles,
+  LifeBuoy,
 } from 'lucide-react';
 
 interface AdminShellProps {
@@ -69,6 +70,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children }) => {
         { label: 'Active Subscriptions', href: '/subscriptions', icon: CreditCard },
         { label: 'SaaS Billing & Ledger', href: '/billing', icon: Receipt },
         { label: 'Usage & Capacity', href: '/usage', icon: BarChart3 },
+        { label: 'Support & Helpdesk', href: '/support', icon: LifeBuoy },
         { label: 'Governance & Audit', href: '/audit', icon: ShieldCheck },
         { label: 'System Health', href: '/system-health', icon: Activity },
       ];

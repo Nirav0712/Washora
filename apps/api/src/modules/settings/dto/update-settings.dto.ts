@@ -44,11 +44,19 @@ export class UpdateTenantSettingsDto {
 
   @IsOptional()
   receiptSettings?: {
+    invoiceTitle?: string;
+    paperSize?: 'A4' | 'THERMAL_80MM' | 'THERMAL_58MM';
+    logoUrl?: string;
     headerText?: string;
     footerText?: string;
-    showGstNumber: boolean;
-    showTermsAndConditions: boolean;
+    showGstNumber?: boolean;
+    showTermsAndConditions?: boolean;
+    showQrCode?: boolean;
+    showBarcode?: boolean;
+    showCustomerGstin?: boolean;
+    showStoreContact?: boolean;
     terms?: string;
+    customFooter?: string;
   };
 
   @IsOptional()

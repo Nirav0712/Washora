@@ -16,6 +16,10 @@ import { Branch, BranchSchema } from '../../schemas/branch.schema';
 import { Role, RoleSchema } from '../../schemas/role.schema';
 import { ProcessingJob, ProcessingJobSchema } from '../../schemas/processing-job.schema';
 import { QualityCheck, QualityCheckSchema } from '../../schemas/quality-check.schema';
+import { TenantSubscription, TenantSubscriptionSchema } from '../../schemas/tenant-subscription.schema';
+import { SubscriptionPlan, SubscriptionPlanSchema } from '../../schemas/subscription-plan.schema';
+import { Tenant, TenantSchema } from '../../schemas/tenant.schema';
+import { TenantSettings, TenantSettingsSchema } from '../../schemas/tenant-settings.schema';
 
 import { StaffController } from './staff.controller';
 import { StaffService } from './staff.service';
@@ -48,6 +52,10 @@ import { RolesModule } from '../roles/roles.module';
       { name: Role.name, schema: RoleSchema },
       { name: ProcessingJob.name, schema: ProcessingJobSchema },
       { name: QualityCheck.name, schema: QualityCheckSchema },
+      { name: TenantSubscription.name, schema: TenantSubscriptionSchema },
+      { name: SubscriptionPlan.name, schema: SubscriptionPlanSchema },
+      { name: Tenant.name, schema: TenantSchema },
+      { name: TenantSettings.name, schema: TenantSettingsSchema },
     ]),
     CounterModule,
     AuditModule,
